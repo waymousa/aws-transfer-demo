@@ -224,56 +224,17 @@ Resources:
         Version: '2012-10-17'
         Id: key-default-1
         Statement:
-        - Effect: Allow
-          Sid: Enable IAM User Permissions
-          Principal:
-            AWS: 
-              - !Join 
-                - ''
-                - - 'arn:aws:iam:::'
-                  - !Ref AWS::AccountId
-                  - ':root'
-          Action: kms:*
-          Resource: '*'
-        - Effect: Allow
-          Sid: Allow administration of the key
-          Principal:
-            AWS: 
-              - !Join 
-                - ''
-                - - 'arn:aws:iam:::'
-                  - !Ref AWS::AccountId
-                  - ':user/*'
-          Action:
-          - kms:Create*
-          - kms:Describe*
-          - kms:Enable*
-          - kms:List*
-          - kms:Put*
-          - kms:Update*
-          - kms:Revoke*
-          - kms:Disable*
-          - kms:Get*
-          - kms:Delete*
-          - kms:ScheduleKeyDeletion
-          - kms:CancelKeyDeletion
-          Resource: '*'
-        - Sid: Allow use of the key
+        - Sid: Enable IAM User Permissions
           Effect: Allow
           Principal:
-            AWS: 
-              - !Join 
-                - ''
-                - - 'arn:aws:iam:::'
-                  - !Ref AWS::AccountId
-                  - ':user/*'
-          Action:
-          - kms:DescribeKey
-          - kms:Encrypt
-          - kms:Decrypt
-          - kms:ReEncrypt*
-          - kms:GenerateDataKey
-          - kms:GenerateDataKeyWithoutPlaintext
+            AWS:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iam::'
+                - Ref: AWS::AccountId
+                - :root
+          Action: kms:*
+          Resource: '*'
           Resource: '*'
 
   AWSTransferServer:
