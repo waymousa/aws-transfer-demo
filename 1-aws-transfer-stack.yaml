@@ -1,0 +1,241 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  VPCCidrBlock:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: Enter a CIDR range for the Snort VPC.
+
+  PubSubNet1CidrBlock:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: Enter a CIDR range for the VPC.
+
+  PubSubNet2CidrBlock:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: Enter a CIDR range for the VPC.
+  
+Mappings: {}
+
+Conditions: {}
+
+Outputs: {}
+
+Resources:
+
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties: 
+      CidrBlock: !Ref VPCCidrBlock
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: aws-transfer-vpc
+
+  PubSubNet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PubSubNet1CidrBlock
+      Tags:
+        - Key: Name
+          Value: aws-transfer-pub-sn1
+
+  PubSubNet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PubSubNet2CidrBlock
+      Tags:
+        - Key: Name
+          Value: aws-transfer-pub-sn2
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: aws-transfer-igw
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+   
+  EIP:
+    DependsOn: InternetGatewayAttachment
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: aws-transfer-igw-eip
+
+  EIP1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: aws-transfer-eip1
+
+  EIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: aws-transfer-eip2
+ 
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: aws-transfer-pub-rt
+  
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  
+  PublicSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PubSubNet1
+
+  PublicSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PubSubNet2
+  
+  AWSTransferServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: 'sts:AssumeRole'
+    
+  AWSTransferScopeDownRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: 'sts:AssumeRole'
+  
+  AWSTransferServerPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: aws-snort-demo-kinesis-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Sid: AllowListingOfUserFolder
+            Action:
+              - s3:ListBucket
+              - s3:GetBucketLocation
+            Resource:
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref AWSTransferBucket
+          - Effect: Allow
+            Sid: HomeDirObjectAccess
+            Action: 
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObjectVersion
+              - s3:DeleteObject
+              - s3:GetObjectVersion
+            Resource: - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref AWSTransferBucket
+                  - '/*'
+          - Effect: Allow
+            Sid: KMSKeyAccess
+            Action: 
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource: - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref AWSTransferBucket
+                  - '/*'
+      Roles:
+        - !Ref AWSTransferServerRole
+  
+  EndPoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties: 
+      PrivateDnsEnabled: 'true'
+      SecurityGroupIds: 
+        - !Ref SecurityGroup1
+      ServiceName: 
+        !Join
+        - ''
+        - - 'com.amazonaws.'
+          - !Ref 'AWS::Region'
+          - '.ssm'
+      SubnetIds: 
+        - !Ref SN1
+      VpcId: !Ref VPC1
+      VpcEndpointType: Interface
+  
+  SecurityGroup1:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow all
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: -1
+        FromPort: 21
+        ToPort: 21
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: -1
+        FromPort: 21
+        ToPort: 21
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: aws-transfer-sg
+
+  AWSTransferBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties: {}
+
+  AWSTransferServer:
+    Type: AWS::Transfer::Server
+      Properties: 
+        EndpointDetails: 
+            SubnetIds: 
+              - !Ref PubSubNet1
+              - !Ref PubSubNet2
+            VpcId: !Ref VPC
+        EndpointType: VPC
+        IdentityProviderType: SERVICE_MANAGED
+        LoggingRole: String
+        Protocols: 
+          - SFTP
