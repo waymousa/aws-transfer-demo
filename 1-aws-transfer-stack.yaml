@@ -168,7 +168,8 @@ Resources:
               - s3:DeleteObjectVersion
               - s3:DeleteObject
               - s3:GetObjectVersion
-            Resource: - !Join 
+            Resource: 
+              - !Join 
                 - ''
                 - - 'arn:aws:s3:::'
                   - !Ref AWSTransferBucket
@@ -179,31 +180,15 @@ Resources:
               - kms:Decrypt
               - kms:Encrypt
               - kms:GenerateDataKey
-            Resource: - !Join 
+            Resource: 
+              - !Join 
                 - ''
                 - - 'arn:aws:s3:::'
                   - !Ref AWSTransferBucket
                   - '/*'
       Roles:
         - !Ref AWSTransferServerRole
-  
-  EndPoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties: 
-      PrivateDnsEnabled: 'true'
-      SecurityGroupIds: 
-        - !Ref SecurityGroup1
-      ServiceName: 
-        !Join
-        - ''
-        - - 'com.amazonaws.'
-          - !Ref 'AWS::Region'
-          - '.ssm'
-      SubnetIds: 
-        - !Ref SN1
-      VpcId: !Ref VPC1
-      VpcEndpointType: Interface
-  
+   
   SecurityGroup1:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -224,18 +209,83 @@ Resources:
 
   AWSTransferBucket:
     Type: 'AWS::S3::Bucket'
-    Properties: {}
+    Properties:
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration: 
+        - ServerSideEncryptionByDefault:
+            KMSMasterKeyID: !GetAtt AWSTransferCMK.Arn
+            SSEAlgorithm: aws-kms
+
+  AWSTransferCMK:
+    Type: AWS::KMS::Key
+    Description: An example symmetric CMK
+    Properties:
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+        - Effect: Allow
+          Sid: Enable IAM User Permissions
+          Principal:
+            AWS: 
+              - !Join 
+                - ''
+                - - 'arn:aws:iam:::'
+                  - !Ref AWS::AccountId
+                  - ':root'
+          Action: kms:*
+          Resource: '*'
+        - Effect: Allow
+          Sid: Allow administration of the key
+          Principal:
+            AWS: 
+              - !Join 
+                - ''
+                - - 'arn:aws:iam:::'
+                  - !Ref AWS::AccountId
+                  - ':user/*'
+          Action:
+          - kms:Create*
+          - kms:Describe*
+          - kms:Enable*
+          - kms:List*
+          - kms:Put*
+          - kms:Update*
+          - kms:Revoke*
+          - kms:Disable*
+          - kms:Get*
+          - kms:Delete*
+          - kms:ScheduleKeyDeletion
+          - kms:CancelKeyDeletion
+          Resource: '*'
+        - Sid: Allow use of the key
+          Effect: Allow
+          Principal:
+            AWS: 
+              - !Join 
+                - ''
+                - - 'arn:aws:iam:::'
+                  - !Ref AWS::AccountId
+                  - ':user/*'
+          Action:
+          - kms:DescribeKey
+          - kms:Encrypt
+          - kms:Decrypt
+          - kms:ReEncrypt*
+          - kms:GenerateDataKey
+          - kms:GenerateDataKeyWithoutPlaintext
+          Resource: '*'
 
   AWSTransferServer:
     Type: AWS::Transfer::Server
-      Properties: 
-        EndpointDetails: 
-            SubnetIds: 
-              - !Ref PubSubNet1
-              - !Ref PubSubNet2
-            VpcId: !Ref VPC
-        EndpointType: VPC
-        IdentityProviderType: SERVICE_MANAGED
-        LoggingRole: String
-        Protocols: 
-          - SFTP
+    Properties:
+      EndpointDetails: 
+        SubnetIds: 
+          - !Ref PubSubNet1
+          - !Ref PubSubNet2
+        VpcId: !Ref VPC
+      EndpointType: VPC
+      IdentityProviderType: SERVICE_MANAGED
+      LoggingRole: String
+      Protocols: 
+        - SFTP
