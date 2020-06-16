@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: 2010-09-09
+# Cfn script to set up the intitla users for a trandsfer server.  I would not use this for ongoing management unless you really want to!
+
+Parameters:
+
+  AWSTransferServer:
+    Type: String
+    Default: s-87614ad1a6ec468ab
+    Description: Enter the User name for your transfer server.
+  
+  User1Name:
+    Type: String
+    Default: user1
+    Description: Enter the User name for your first user.
+  
+  User1SshPubKey:
+    Type: String
+    Default: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzjSQfAHeGvJRbTyyEU28K1qTG9TKYxrsgkCA4bigyWkpCTNVduYSroS8FYgyGXMJQsYBmZTSnjV2gbaiUeUSZJrVGryVYfyRp2JjQiQUaNlc+wfmr98Sou/q4QpAUOjNhw3vku/APIGoISqnP/b+g+Gv4m3Yb6Tp/D7tnlTOGSGfHIlFHnFtAUoUA20JH+BLC7602/M+KYpucDISh7cu3w/9E7BKMp9S/ZSrOJ6DVBF8ZC110T4s7u2wg7TeeMGIVAn+UPiXddDihlw1V2klsnHUKQlU+XyDaDdJpjWnrWxni8+gZsMK3rbFuPgxRmv0F/t6XJXHTImuFXzqLVK6R user1@aws-data-transfer"
+    Description: Enter the User name for your first user.
+
+  User2Name:
+    Type: String
+    Default: user2
+    Description: Enter the User name for your second user.
+
+  User2SshPubKey:
+    Type: String
+    Default: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9GTFsBybJ3Qxj60/RPSz5AHmllrt/pqvLeiIRR9iZ6q3wtaR2hy0ohCAFU6TMDFjogu8jC4IOiFewndYc4gupFIKiq2IBrP4t9YJJtAIndIpMMpMktiTRxhp4noKZqS6c3IgWjVCAD0NxAuhqjP0A09E3inRL33qBY1ilx5KbRwmHsDPdPAaH9nWwRdM5yKTARmcX+o21PHP8c3P01/buFOj22VsxzDaPIITkLCjlXs26X0G160174iaTIMQiXYYngjX9WXbjYcLargk9fERvZtX93es407xoi15l/HFBOG3JU4jOsSu8xOABfFU0X67vAAKgGQ3JSXtKELzsY0V5 user2@aws-data-transfer"
+    Description: Enter the User name for your first user.
+
+Mappings: {}
+
+Conditions: {}
+
+Outputs: {}
+
+Resources:
+
+  AWSTransferUser1:
+    Type: AWS::Transfer::User
+    Properties: 
+      HomeDirectory: !Ref User1Name
+      HomeDirectoryType: PATH
+      Policy: !Ref AWSTransferScopeDownPolicy
+      Role: !GetAtt AWSTransferServerRole.Arn
+      ServerId: !Ref AWSTransferServer
+      SshPublicKeys: 
+        - !Ref User1SshPubKey
+      UserName: !Ref User1Name
+  
+  AWSTransferUser2:
+    Type: AWS::Transfer::User
+    Properties: 
+      HomeDirectory: !Ref User2Name
+      HomeDirectoryType: PATH
+      Policy: !Ref AWSTransferScopeDownPolicy
+      Role: !GetAtt AWSTransferServerRole.Arn
+      ServerId: !Ref AWSTransferServer
+      SshPublicKeys: 
+        - !Ref User2SshPubKey
+      UserName: !Ref User2Name
+
+  AWSTransferScopeDownPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SFTP-Scope-Down-Policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowListingOfUserFolder
+            Effect: Allow
+            Action: 
+              - s3:ListBucket
+            Resource: arn:aws:s3:::${transfer:HomeBucket}
+            Condition:
+              StringLike:
+                s3:prefix:
+                - "${transfer:HomeFolder}/*"
+                - "${transfer:HomeFolder}"
+          - Sid: HomeDirObjectAccess
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObjectVersion
+              - s3:DeleteObject
+              - s3:GetObjectVersion
+              - s3:GetObjectACL
+              - s3:PutObjectACL
+            Resource: arn:aws:s3:::${transfer:HomeDirectory}*
+      Roles:
+        - !Ref AWSTransferServerRole
+
+  AWSTransferServerPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SFTP-Access-Policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Sid: AllowListingOfUserFolder
+            Action:
+              - s3:ListBucket
+              - s3:GetBucketLocation
+            Resource:
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref AWSTransferBucket
+          - Effect: Allow
+            Sid: HomeDirObjectAccess
+            Action: 
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObjectVersion
+              - s3:DeleteObject
+              - s3:GetObjectVersion
+            Resource: 
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref AWSTransferBucket
+                  - '/*'
+          - Effect: Allow
+            Sid: KMSKeyAccess
+            Action: 
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource: 
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref AWSTransferBucket
+                  - '/*'
+      Roles:
+        - !Ref AWSTransferServerRole
+
+  AWSTransferServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:          
+          -
+            Effect: Allow
+            Principal:
+              Service: transfer.amazonaws.com
+            Action: 'sts:AssumeRole'
+  
+  AWSTransferBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration: 
+          - ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !GetAtt AWSTransferCMK.Arn
+              SSEAlgorithm: aws:kms
+
+  AWSTransferCMK:
+    Type: AWS::KMS::Key
+    Description: An example symmetric CMK
+    Properties:
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+        - Sid: Enable IAM User Permissions
+          Effect: Allow
+          Principal:
+            AWS:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iam::'
+                - Ref: AWS::AccountId
+                - :root
+          Action: kms:*
+          Resource: '*'
