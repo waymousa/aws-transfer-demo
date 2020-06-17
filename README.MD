@@ -6,9 +6,7 @@ This CloudFormation script builds out an AWS Transfer environment with KMS bucke
 The purpose of this CloudFormation template is to enable a Transfer Server, CloudWatch logging, VPC, EIP, CC Endfpoint and Subnets needed to set up the environment for SFTP transfers.
 Open CLoudForemat and run the following script *1-aws-transfer-server-stack.yaml*
 
-# 2. Enable The Internet Endpoint
-The purpose of this step is to enable access to the SFTP Server from the Internet.  You will set up the Security Group against the VPC Endpoint to control who can access the site.  Optionally, you can import an existing ssh server public key to help identify your server to the clients.
-
-# 3. Set up Users and Bucket resources
-The purpose of this step is to enable the users of the site.  You will need to create some ssh keys for the server and users.  This step also creates the bucket and IAM roles necessary for your users and the AWS Transfer Server to process requests.
-Run the following CloudFormation script in your target account *2-aws-transfer-user-stack.yaml*
+# 2. Enable Scope Down Policy
+It is not possible to sert up the scope down policy in the CloudFormation script when you need to dynamically set up the CMK for the bucket.  There is a policy that is created that you need to attache to the user objects uusing the following CLI command:
+aws transfer update-user --server-id server --user-name user --policy \
+   "$(aws iam get-policy-version --policy-arn policy --version-id version --output json)"
