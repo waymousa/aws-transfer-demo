@@ -6,7 +6,7 @@ This [CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserG
 The code is for demo purposes only and should not be considred production ready.  Feel free to fork the repo and use it as a starting point for your own production stable code.
 
 # A. Pre-requisite activities
-This project contains a CloudFormation template that sets up the SFTP Transfer server and 2 sample users.  Now the topic of how one manages ssh keys for these users is a matter of policy ijn youir organisation, however I would strongly recommend that you take the same approach as gitbu and other public repos, whjich is to insist that your customers manage their ssh key pairs tmelseves and opnly send you the public key.  This pushes the responsibility for private key management back on the customer.  To this end, the CloudFormation template has a parameter for each user to supply a ssh public key.  This is not a security risk because its only the public key that is needed.  If you are building this out as a demo for your own use then you can generate the key pairs yourself using ssh-keygen and then put the public keys in the template as default values or at run time which is what I did.  I have recorded the steps below.
+This project contains a CloudFormation template that sets up the SFTP Transfer server and 2 sample users.  Now the topic of how one manages ssh keys for these users is a matter of policy ijn youir organisation, however I would strongly recommend that you take the same approach as gitbu and other public repos, whjich is to insist that your customers manage their ssh key pairs tmelseves and opnly send you the public key.  This pushes the responsibility for private key management back on the customer.  To this end, the CloudFormation template has a parameter for each user to supply a ssh public key.  This is not a security risk because its only the public key that is needed.  If you are building this out as a demo for your own use then you can generate the key pairs yourself using ssh-keygen and then put the public keys in the template as default values or at run time which is what I did.  An example of how you can do this is shown below
 ```bash
 $ ssh-keygen
 Generating public/private rsa key pair.
@@ -29,7 +29,8 @@ The key''s randomart image is:
 |    + o .  + .   |
 |     +.  .oo+    |
 +----[SHA256]-----+
-$
+$ cat data-transfer-user3.pub
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDu7+gybjvDOAf2OzbJb5qLomyQGz27n7TVR4BUJe6kqzcakxwhBiAwxab65BN5jLFuZRPV5qs2P48nUJp4PmLXwVmBIme1UNXUVte3dJRGttnbCmCBdS0HhyX3swDWosaRxUHrQCQ/0GzIvjZmdFF6eFSKJ63cZ1GAcIsVUZKW9F1b446QDCFmsedGW/hqOM8Kgn9h8WQqJhaHGIeg0HmU9/cdSOB9cdoIXEgBcAdVzRUyAQloKR3+CJI2P7dTk9K5NqYhr1opvsbF81eecsLQaVkl48lkWy8lorOG8JkUgz56MvircV2s/9kDa9Np8ZM2/gIGHfG2QO3phEcVVbtB
 ```
 
 # B. Create the Transfer Server
