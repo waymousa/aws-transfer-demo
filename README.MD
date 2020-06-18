@@ -46,5 +46,7 @@ Full automation of user creation and ongoing management is beyond the scope of t
 
 # 2. Enable Scope Down Policy
 The scope-down policy for users needs to be added to the user object as a JSON blob.  While you can create the scope-down policy as an IAM object, its is not possible to reference it by arn in the CloudFormation template so you need to update the user records manually after they have ben created.  You can do this in the console, or you can attach the policy to the user objects using the following CLI command:
+```bash
 aws transfer update-user --server-id server --user-name user --policy \
    "$(aws iam get-policy-version --policy-arn policy --version-id version --output json)"
+```
