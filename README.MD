@@ -1,12 +1,14 @@
-# AWS tramnsfer Demo
+# AWS Transfer Demo
 
-This CloudFormation script builds out an AWS Transfer environment with KMS bucket encryption.  Trust me when I say you do not want to do this manually.
+This CloudFormation script builds out an demo AWS Transfer environment with KMS bucket encryption.  Trust me when I say you do not want to do this manually.  The code is for demo purposes only and should not be considred production ready.  Feel free to fork the repo and use it as a starting point for your own production stable code.
 
-# 1. Create the Transfer Server
-The purpose of this CloudFormation template is to enable a Transfer Server, CloudWatch logging, VPC, EIP, CC Endfpoint and Subnets needed to set up the environment for SFTP transfers.
-Open CLoudForemat and run the following script *1-aws-transfer-server-stack.yaml*
+# A. Pre-requisite activities
+This project contains a CloudFormation template that sets up the SFTP Transfer server and 2 sample users.  Now the topic of how one manages ssh keys for these users is a matter of policy ijn youir organisation, however I would strongly recommend that you take the same approach as gitbu and other public repos, whjich is to insist that your customers manage their ssh key pairs tmelseves and opnly send you the public key.  This pushes the responsibility for private key management back on the customer.  To this end, the CloudFormation template has a parameter for each user to supply a ssh public key.  This is not a security risk because its only the public key that is needed.  If you are building this out as a demo for your own use then you can generate the key pairs yourself using ssh-keygen and then put the public keys in the template as default values or at run time which is what I did.  I have recorded the steps below.
+
+# B. Create the Transfer Server
+The purpose of this CloudFormation template is to enable a Transfer Server, CloudWatch logging, VPC, EIP, Internet facing Endpoint and Subnets needed to set up the environment for SFTP transfers.  It also creates an S3 Bucket, CMK, IAM policies and soem sample users.  To run the script, open AWS Console in the account you wish to test this in and uswe the following CloudFormation Template *1-aws-transfer-server-stack.yaml*.  When you run the script, you will see parameters for the user name and ssh public key.  The username parameter is used for both the name of the user and the name of the home directory that you will need to create in the S3 bucket.  It is possible to generate the folders in the bucket automatically as part of the CloudFormation template but requires the addition of custom CloudFoprmation targets as descriubed in this StackOverflow thread https://stackoverflow.com/questions/36917947/create-folder-inside-s3-bucket-using-cloudformation.  
 
 # 2. Enable Scope Down Policy
-It is not possible to sert up the scope down policy in the CloudFormation script when you need to dynamically set up the CMK for the bucket.  There is a policy that is created that you need to attache to the user objects uusing the following CLI command:
+The scope-down policy for users needs to be added to the user object as a JSON blob.  While you can create the scope-down policy as an IAM object, its is not possible to reference it by arn in the CloudFormation template so you need to update the user records manually after they have ben created.  You can do this in the console, or you can attach the policy to the user objects using the following CLI command:
 aws transfer update-user --server-id server --user-name user --policy \
    "$(aws iam get-policy-version --policy-arn policy --version-id version --output json)"
