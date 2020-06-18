@@ -11,8 +11,8 @@ This project contains a CloudFormation template that sets up the SFTP Transfer s
 $ ssh-keygen
 Generating public/private rsa key pair.
 Enter file \in which to save the key (/home/swaym/.ssh/id_rsa): data-transfer-user1
-Enter passphrase (empty \for no passphrase): <your-password-here>
-Enter same passphrase again: <your-password-here>
+Enter passphrase (empty \for no passphrase): \<your-password-here\>
+Enter same passphrase again: \<your-password-here\>
 Your identification has been saved \in data-transfer-user1.
 Your public key has been saved \in data-transfer-user1.pub.
 The key fingerprint is:
