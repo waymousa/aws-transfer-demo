@@ -3,21 +3,21 @@
 This [CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html "CloudFormation") script builds out an demo SFTP Enabled [AWS Transfer Server](https://docs.aws.amazon.com/transfer/latest/userguide/create-server-sftp.html "AWS Transfer Server") environment with [KMS bucket encryption with CMK](https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingKMSEncryption.html "KMS bucket encryption with CMK").  Trust me when I say you do not want to do this manually.  
 
 ### POINT TO NOTE
-The code is for demo purposes only and should not be considred production ready.  Feel free to fork the repo and use it as a starting point for your own production stable code.
+The code is for demo purposes only and should not be considered production ready.  Feel free to fork the repo and use it as a starting point for your own production stable code.
 
 # A. Pre-requisite activities
-This project contains a CloudFormation template that sets up the SFTP Transfer server and 2 sample users.  Now the topic of how one manages ssh keys for these users is a matter of policy ijn youir organisation, however I would strongly recommend that you take the same approach as gitbu and other public repos, whjich is to insist that your customers manage their ssh key pairs tmelseves and opnly send you the public key.  This pushes the responsibility for private key management back on the customer.  To this end, the CloudFormation template has a parameter for each user to supply a ssh public key.  This is not a security risk because its only the public key that is needed.  If you are building this out as a demo for your own use then you can generate the key pairs yourself using ssh-keygen and then put the public keys in the template as default values or at run time which is what I did.  An example of how you can do this is shown below
+This project contains a CloudFormation template that sets up the SFTP Transfer server and 2 sample users.  The topic of how one manages ssh keys for these users is a matter of policy in your organisation, however I would strongly recommend that you take the same approach as github and other public repos which is to require your customers manage their own ssh key pairs and only send you the public key.  This pushes the responsibility for private key management back on the customer.  To this end, the CloudFormation template has a parameter for each user to supply a ssh public key.  This is not a security risk because its only the public key that is needed.  If you are building this out as a demo for your own use then you can generate the key pairs yourself using ssh-keygen and then put the public keys in the template as default values or at run time which is what I did.  An example of how you can do this is shown below.
 ```bash
 $ ssh-keygen
 Generating public/private rsa key pair.
-Enter file in which to save the key (/home/swaym/.ssh/id_rsa): data-transfer-user3
-Enter passphrase (empty for no passphrase):
-Enter same passphrase again:
-Your identification has been saved in data-transfer-user3.
-Your public key has been saved in data-transfer-user3.pub.
+Enter file \in which to save the key (/home/swaym/.ssh/id_rsa): data-transfer-user1
+Enter passphrase (empty \for no passphrase): <your-password-here>
+Enter same passphrase again: <your-password-here>
+Your identification has been saved \in data-transfer-user1.
+Your public key has been saved \in data-transfer-user1.pub.
 The key fingerprint is:
-SHA256:2WnO/EARidHGsMOF33plso0DrM0oqbWUOm/9nxoJc4U swaym@LHR14-CG73858CM
-The key''s randomart image is:
+SHA256:2WnO/EARidHGsMOF33plso0DrM0oqbWUOm/9nxoJc4U
+The key\'s randomart image is:
 +---[RSA 2048]----+
 |        oBo.     |
 |       .oo=o     |
@@ -32,6 +32,7 @@ The key''s randomart image is:
 $ cat data-transfer-user3.pub
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDu7+gybjvDOAf2OzbJb5qLomyQGz27n7TVR4BUJe6kqzcakxwhBiAwxab65BN5jLFuZRPV5qs2P48nUJp4PmLXwVmBIme1UNXUVte3dJRGttnbCmCBdS0HhyX3swDWosaRxUHrQCQ/0GzIvjZmdFF6eFSKJ63cZ1GAcIsVUZKW9F1b446QDCFmsedGW/hqOM8Kgn9h8WQqJhaHGIeg0HmU9/cdSOB9cdoIXEgBcAdVzRUyAQloKR3+CJI2P7dTk9K5NqYhr1opvsbF81eecsLQaVkl48lkWy8lorOG8JkUgz56MvircV2s/9kDa9Np8ZM2/gIGHfG2QO3phEcVVbtB
 ```
+You can now put the public key into the CloudFormation Template as a default parameter or you can insert it during the deployment time.  Do not expose your private key and keey is password protected.
 
 # B. Create the Transfer Server
 The purpose of this CloudFormation template is to enable a Transfer Server, CloudWatch logging, VPC, EIP, Internet facing Endpoint and Subnets needed to set up the environment for SFTP transfers.  It also creates an S3 Bucket, CMK, IAM policies and some sample users.  
