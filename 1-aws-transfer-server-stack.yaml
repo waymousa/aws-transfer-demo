@@ -226,7 +226,7 @@ Resources:
   AWSTransferScopeDownPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: SFTP-Scope-Down-Policy
+      PolicyName: data-transfer-scope-down-access-policy
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -257,7 +257,7 @@ Resources:
   AWSTransferServerPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: SFTP-Access-Policy
+      PolicyName: data-transfer-server-access-policy
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -340,3 +340,20 @@ Resources:
                 - :root
           Action: kms:*
           Resource: '*'
+        - Sid: "Allow use of the key"
+          Effect: Allow
+          Principal:
+            AWS: !GetAtt AWSTransferServerRole.Arn
+          Action:
+            - "kms:Encrypt"
+            - "kms:Decrypt"
+            - "kms:ReEncrypt"
+            - "kms:GenerateDataKey*"
+            - "kms:DescribeKey"
+          Resource: "*"
+  
+  AWSTransferKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties: 
+      AliasName: 'alias/data-transfer-cmk'
+      TargetKeyId: !Ref AWSTransferCMK
