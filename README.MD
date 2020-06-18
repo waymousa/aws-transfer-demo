@@ -36,16 +36,18 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDu7+gybjvDOAf2OzbJb5qLomyQGz27n7TVR4BUJe6k
 # B. Create the Transfer Server
 The purpose of this CloudFormation template is to enable a Transfer Server, CloudWatch logging, VPC, EIP, Internet facing Endpoint and Subnets needed to set up the environment for SFTP transfers.  It also creates an S3 Bucket, CMK, IAM policies and some sample users.  
 
-To run the script, open AWS Console in the account you wish to test this in and uswe the following CloudFormation Template *1-aws-transfer-server-stack.yaml*.  
+To run the script, open AWS Console in the account you wish to build the environment within and use the following CloudFormation Template *1-aws-transfer-server-stack.yaml*.  
 
-When you run the script, you will see parameters for the sample user name and ssh public key.  The username parameter is used for both the name of the user and the name of the home directory that you will need to create in the S3 bucket.  
+When you run the script, you will see parameters for the sample user name and ssh public key.  The username parameter is used for both the name of the user and the name of the home directory.  The Cloudformation script does not create the S3 folder for you so you will need to do that manually after the script has run.  
 
-It is possible to generate the folders in the bucket automatically as part of the CloudFormation template but requires the addition of custom CloudFoprmation targets as described in this StackOverflow thread https://stackoverflow.com/questions/36917947/create-folder-inside-s3-bucket-using-cloudformation.  
+### POINT TO NOTE
+It is possible to generate the folders in the bucket automatically as part of the CloudFormation template but requires the addition of custom CloudFormation targets as described in this StackOverflow thread [create folder inside S3 bucket using Cloudformation](https://stackoverflow.com/questions/36917947/create-folder-inside-s3-bucket-using-cloudformation "create folder inside S3 bucket using Cloudformation").  Full automation of user creation and ongoing management is beyond the scope of this demo, but I would probaboly not recommend you do that task as a CloudFormation activity.  Instead, it makes sense to integrate your ISMS with the solution using the Transfer CLI/API.
 
-Full automation of user creation and ongoing management is beyond the scope of this demo, but I would probaboly not recommend you do that task as a CloudFormation activity.  Instead, it makes sense to ingertare your ISMS with the solution usign the Transfer CLI/API.
+# C. Update the Security Group
+The purpose of this step is to change the Transfer Server Endpoint to use a customer Security Group that was created by the CloudFormation template.  This allows you to secure your Transfer Server site as described in this blog post [Use IP whitelisting to secure your AWS Transfer for SFTP servers](https://aws.amazon.com/blogs/storage/use-ip-whitelisting-to-secure-your-aws-transfer-for-sftp-servers/ "Use IP whitelisting to secure your AWS Transfer for SFTP servers").  
 
-# 2. Enable Scope Down Policy
-The scope-down policy for users needs to be added to the user object as a JSON blob.  While you can create the scope-down policy as an IAM object, its is not possible to reference it by arn in the CloudFormation template so you need to update the user records manually after they have ben created.  You can do this in the console, or you can attach the policy to the user objects using the following CLI command:
+# D. Enable Scope Down Policy
+The scope-down policy for users needs to be added to the user object as a JSON blob.  While you can create the scope-down policy as an IAM object, its is not possible to reference it by arn in the CloudFormation template so you need to update the user records manually after they have ben created.  You can do this in the AWS Console, or you can attach the policy to the user objects using the following CLI command as a guide.
 ```bash
 aws transfer update-user --server-id server --user-name user --policy \
    "$(aws iam get-policy-version --policy-arn policy --version-id version --output json)"
