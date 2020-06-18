@@ -17,6 +17,11 @@ Parameters:
     Default: 10.0.2.0/24
     Description: Enter a CIDR range for the VPC.
 
+  TransferServerSG:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: Enter the CIDR range for the IP allow list for your Internet facing endpoint.
+
   User1Name:
     Type: String
     Default: user1
@@ -25,7 +30,7 @@ Parameters:
   User1SshPubKey:
     Type: String
     Default: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzjSQfAHeGvJRbTyyEU28K1qTG9TKYxrsgkCA4bigyWkpCTNVduYSroS8FYgyGXMJQsYBmZTSnjV2gbaiUeUSZJrVGryVYfyRp2JjQiQUaNlc+wfmr98Sou/q4QpAUOjNhw3vku/APIGoISqnP/b+g+Gv4m3Yb6Tp/D7tnlTOGSGfHIlFHnFtAUoUA20JH+BLC7602/M+KYpucDISh7cu3w/9E7BKMp9S/ZSrOJ6DVBF8ZC110T4s7u2wg7TeeMGIVAn+UPiXddDihlw1V2klsnHUKQlU+XyDaDdJpjWnrWxni8+gZsMK3rbFuPgxRmv0F/t6XJXHTImuFXzqLVK6R user1@aws-data-transfer"
-    Description: Enter the User name for your first user.
+    Description: Enter the ssh public key for your first user.
 
   User2Name:
     Type: String
@@ -35,7 +40,7 @@ Parameters:
   User2SshPubKey:
     Type: String
     Default: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9GTFsBybJ3Qxj60/RPSz5AHmllrt/pqvLeiIRR9iZ6q3wtaR2hy0ohCAFU6TMDFjogu8jC4IOiFewndYc4gupFIKiq2IBrP4t9YJJtAIndIpMMpMktiTRxhp4noKZqS6c3IgWjVCAD0NxAuhqjP0A09E3inRL33qBY1ilx5KbRwmHsDPdPAaH9nWwRdM5yKTARmcX+o21PHP8c3P01/buFOj22VsxzDaPIITkLCjlXs26X0G160174iaTIMQiXYYngjX9WXbjYcLargk9fERvZtX93es407xoi15l/HFBOG3JU4jOsSu8xOABfFU0X67vAAKgGQ3JSXtKELzsY0V5 user2@aws-data-transfer"
-    Description: Enter the User name for your first user.
+    Description: Enter the ssh public key for your second user.
   
 Mappings: {}
 
@@ -171,14 +176,10 @@ Resources:
       GroupDescription: Allow all
       VpcId: !Ref VPC
       SecurityGroupIngress:
-      - IpProtocol: -1
-        FromPort: 21
-        ToPort: 21
-        CidrIp: 0.0.0.0/0
-      - IpProtocol: -1
-        FromPort: 21
-        ToPort: 21
-        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: !Ref TransferServerSG
       Tags:
         - Key: Name
           Value: aws-transfer-sg
