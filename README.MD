@@ -77,4 +77,4 @@ aws transfer update-user --server-id server --user-name user --policy \
 Follow the testing procedure outlined at this link for specific instructions related to your [file transfer client](https://docs.aws.amazon.com/transfer/latest/userguide/getting-started-use-the-service.html, "file transfer client.")
 
 # F. Delete the stack
-You can delete the stack once you have finished playing with it.  First, shutdown the Transfer Server to prevent usaers from uploading new files.  Next, empty the S3 bucket.  Last, delet the stack toi delete the resources.  The CMK will be disabled then deleted after 7 days.
+You can delete the stack once you have finished playing with it.  First, shutdown the Transfer Server to prevent usaers from uploading new files.  Next, empty the S3 bucket.  Last, delete the stack to delete the resources.  The CMK will be disabled then deleted after 7 days.

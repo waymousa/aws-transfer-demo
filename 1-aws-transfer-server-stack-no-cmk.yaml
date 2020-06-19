@@ -1,0 +1,351 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  VPCCidrBlock:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: Enter a CIDR range for the Snort VPC.
+
+  PubSubNet1CidrBlock:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: Enter a CIDR range for the VPC.
+
+  PubSubNet2CidrBlock:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: Enter a CIDR range for the VPC.
+
+  TransferServerSG:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: Enter the CIDR range for the IP allow list for your Internet facing endpoint.
+
+  User1Name:
+    Type: String
+    Default: user1
+    Description: Enter the User name for your first user.
+  
+  User1SshPubKey:
+    Type: String
+    Default: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzjSQfAHeGvJRbTyyEU28K1qTG9TKYxrsgkCA4bigyWkpCTNVduYSroS8FYgyGXMJQsYBmZTSnjV2gbaiUeUSZJrVGryVYfyRp2JjQiQUaNlc+wfmr98Sou/q4QpAUOjNhw3vku/APIGoISqnP/b+g+Gv4m3Yb6Tp/D7tnlTOGSGfHIlFHnFtAUoUA20JH+BLC7602/M+KYpucDISh7cu3w/9E7BKMp9S/ZSrOJ6DVBF8ZC110T4s7u2wg7TeeMGIVAn+UPiXddDihlw1V2klsnHUKQlU+XyDaDdJpjWnrWxni8+gZsMK3rbFuPgxRmv0F/t6XJXHTImuFXzqLVK6R user1@aws-data-transfer"
+    Description: Enter the ssh public key for your first user.
+
+  User2Name:
+    Type: String
+    Default: user2
+    Description: Enter the User name for your second user.
+
+  User2SshPubKey:
+    Type: String
+    Default: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9GTFsBybJ3Qxj60/RPSz5AHmllrt/pqvLeiIRR9iZ6q3wtaR2hy0ohCAFU6TMDFjogu8jC4IOiFewndYc4gupFIKiq2IBrP4t9YJJtAIndIpMMpMktiTRxhp4noKZqS6c3IgWjVCAD0NxAuhqjP0A09E3inRL33qBY1ilx5KbRwmHsDPdPAaH9nWwRdM5yKTARmcX+o21PHP8c3P01/buFOj22VsxzDaPIITkLCjlXs26X0G160174iaTIMQiXYYngjX9WXbjYcLargk9fERvZtX93es407xoi15l/HFBOG3JU4jOsSu8xOABfFU0X67vAAKgGQ3JSXtKELzsY0V5 user2@aws-data-transfer"
+    Description: Enter the ssh public key for your second user.
+  
+Mappings: {}
+
+Conditions: {}
+
+Outputs: {}
+
+Resources:
+
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties: 
+      CidrBlock: !Ref VPCCidrBlock
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: !Join [ '', [!Ref "AWS::StackName", '-vpc'] ]
+
+  PubSubNet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: 
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      CidrBlock: !Ref PubSubNet1CidrBlock
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-pub-sn1']]
+
+  PubSubNet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      CidrBlock: !Ref PubSubNet2CidrBlock
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-pub-sn2']]
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-igw']]
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+   
+  EIP:
+    DependsOn: InternetGatewayAttachment
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-igw-eip']]
+
+  EIP1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-eip1']]
+
+  EIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-eip2']]
+ 
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-pub-rt']]
+  
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  
+  PublicSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PubSubNet1
+
+  PublicSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PubSubNet2
+  
+  AWSTransferCloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - !Join 
+          - ''
+          - - 'arn:aws:iam::'
+            - !Ref AWS::AccountId
+            - ':policy/CloudWatchWritePolicy'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:          
+          -
+            Effect: Allow
+            Principal:
+              Service: transfer.amazonaws.com
+            Action: 'sts:AssumeRole'
+   
+  SecurityGroup1:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow all
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: !Ref TransferServerSG
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-sg']]
+
+  AWSTransferServer:
+    Type: AWS::Transfer::Server
+    Properties:
+      EndpointType: VPC
+      EndpointDetails: 
+        SubnetIds: 
+          - !Ref PubSubNet1
+          - !Ref PubSubNet2
+        VpcId: !Ref VPC
+        AddressAllocationIds:
+          - !GetAtt EIP1.AllocationId
+          - !GetAtt EIP2.AllocationId
+      IdentityProviderType: SERVICE_MANAGED
+      LoggingRole: !GetAtt AWSTransferCloudWatchRole.Arn
+      Protocols: 
+        - SFTP
+  
+  AWSTransferUser1:
+    Type: AWS::Transfer::User
+    Properties: 
+      HomeDirectory: !Sub "/${AWSTransferBucket}/${User1Name}"
+      HomeDirectoryType: PATH
+      Role: !GetAtt AWSTransferServerRole.Arn
+      ServerId: !GetAtt AWSTransferServer.ServerId
+      SshPublicKeys: 
+        - !Ref User1SshPubKey
+      UserName: !Ref User1Name
+  
+  AWSTransferUser2:
+    Type: AWS::Transfer::User
+    Properties: 
+      HomeDirectory: !Sub "/${AWSTransferBucket}/${User2Name}"
+      HomeDirectoryType: PATH
+      Role: !GetAtt AWSTransferServerRole.Arn
+      ServerId: !GetAtt AWSTransferServer.ServerId
+      SshPublicKeys: 
+        - !Ref User2SshPubKey
+      UserName: !Ref User2Name
+
+  AWSTransferScopeDownPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Data Transfer Scope Down Policy."
+      ManagedPolicyName: !Join ['',[!Ref "AWS::StackName", '-scope-down-policy']]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowListingOfUserFolder
+            Effect: Allow
+            Action: 
+              - s3:ListBucket
+            Resource: arn:aws:s3:::${transfer:HomeBucket}
+            Condition:
+              StringLike:
+                s3:prefix:
+                - "${transfer:HomeFolder}/*"
+                - "${transfer:HomeFolder}"
+          - Sid: HomeDirObjectAccess
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObjectVersion
+              - s3:DeleteObject
+              - s3:GetObjectVersion
+              - s3:GetObjectACL
+              - s3:PutObjectACL
+            Resource: arn:aws:s3:::${transfer:HomeDirectory}*
+
+  AWSTransferServerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Data Transfer Server Policy."
+      ManagedPolicyName: !Join ['',[!Ref "AWS::StackName", '-transfer-server-policy']]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Sid: AllowListingOfUserFolder
+            Action:
+              - s3:ListBucket
+              - s3:GetBucketLocation
+            Resource:
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref AWSTransferBucket
+          - Effect: Allow
+            Sid: HomeDirObjectAccess
+            Action: 
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObjectVersion
+              - s3:DeleteObject
+              - s3:GetObjectVersion
+            Resource: 
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref AWSTransferBucket
+                  - '/*'
+      Roles:
+        - !Ref AWSTransferServerRole
+
+  AWSTransferServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:          
+          -
+            Effect: Allow
+            Principal:
+              Service: transfer.amazonaws.com
+            Action: 'sts:AssumeRole'
+  
+  AWSTransferBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration: 
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  AWSTransferCMK:
+    Type: AWS::KMS::Key
+    Description: "Data Transfer bucket CMK."
+    Properties:
+      EnableKeyRotation: true
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+        - Sid: Enable IAM User Permissions
+          Effect: Allow
+          Principal:
+            AWS:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iam::'
+                - Ref: AWS::AccountId
+                - :root
+          Action: kms:*
+          Resource: '*'
+        - Sid: "Allow use of the key"
+          Effect: Allow
+          Principal:
+            AWS: !GetAtt AWSTransferServerRole.Arn
+          Action:
+            - "kms:Encrypt"
+            - "kms:Decrypt"
+            - "kms:ReEncrypt"
+            - "kms:GenerateDataKey*"
+            - "kms:DescribeKey"
+          Resource: "*"
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-cmk']]
+  
+  AWSTransferKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties: 
+      AliasName: 'alias/data-transfer-cmk'
+      TargetKeyId: !Ref AWSTransferCMK
