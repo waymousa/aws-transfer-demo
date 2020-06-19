@@ -37,17 +37,17 @@ You can now put the public key into the CloudFormation Template as a default par
 # B. Create the Transfer Server
 The purpose of this CloudFormation template is to enable a Transfer Server, CloudWatch logging, VPC, EIP, Internet facing Endpoint and Subnets needed to set up the environment for SFTP transfers.  It also creates an S3 Bucket, CMK, IAM policies and some sample users.  To run the script, open AWS Console in the account you wish to build the environment within and use the following CloudFormation Template **1-aws-transfer-server-stack.yaml**.  When you run the script, you will see parameters for the sample user name and ssh public key.  The username parameter is used for both the name of the user and the name of the home directory.  The Cloudformation script does not create the S3 folder for you so you will need to do that manually after the script has run.  
 
-1. Navigate to the Cloudformation service in the AWS Console.
-2. Click on the **Create Stack** button and select **with new resources** from the menu.
+1. Navigate to the **Cloudformation** service in the **AWS Console**.
+2. Click on the **Create Stack** button and select **with new resources (standard)** from the menu.
 3. In the **Specify template** window, select **upload a template file**.
 4. Click on the **Choose file** button and then select the template file **1-aws-transfer-server-stack.yaml**.  Click on the **open** button.
 5. Click on the **next** button to continue.
-6. Type in **data-transfer-stack** for the Stack Name.  Review the other parameters for correctness.  Set up the **user** names and **ssh public keys** as well as the CIDR range for the security group.  Click **next** button to continue.
+6. Type in **data-transfer-stack** for the Stack Name.  Review the other parameters for correctness.  Make sure that you have the right details for the **user** names, **ssh public keys**, **VPC and Subnet** CIDR ranges, as well as the CIDR range for the **security group**.  Click **next** button to continue.
 7. At the **stack options** page click on **next** to continue.
-8. In the **review stack** page, click on the checkbox for **I acknowledge that AWS CloudFormation might create IAM resources** and then click on the **Create stack** button.  The stack will now run for about 5-10 minutes.
-9. Navigate to the S3 Service page in the AWS Console.
-10.  Locate the buttoet created during the stack deployment.
-11.  Create two folders in the root of the bucket, using the names of each user that you supplied in the stack paramaters.  By default these are **user1** and **user2**.  Clcik on the **create folder** button.  Type in the name of the user.  Select **AWS-KMS** as the encryption type and select the **data-transfer-cmk** as the key.  Clcik on the **save** button for each bucket as you create it.  Repeat this proces for each user.
+8. In the **review stack** page, click on the checkbox for **I acknowledge that AWS CloudFormation might create IAM resources** and then click on the **Create stack** button.  The stack will now run for about 5-10 minutes.  **Pause here** until the stack deployment is completed.
+9. Navigate to the **S3 Service** page in the **AWS Console**.
+10.  Locate the bucket created during the stack deployment.  It should have a name beginning with **data-transfer-stack** followed by a unique ID.
+11.  Create two folders in the root of the bucket, using the names of each user that you supplied in the stack paramaters.  By default these are **user1** and **user2**.  Click on the **create folder** button.  Type in the name of the user.  Select **AWS-KMS** as the encryption type and select the **data-transfer-cmk** as the key.  Click on the **save** button for each bucket as you create it.  Repeat this proces for each user.
 
 ### POINT TO NOTE
 It is possible to generate the folders in the bucket automatically as part of the CloudFormation template but requires the addition of custom CloudFormation targets as described in this StackOverflow thread [create folder inside S3 bucket using Cloudformation](https://stackoverflow.com/questions/36917947/create-folder-inside-s3-bucket-using-cloudformation "create folder inside S3 bucket using Cloudformation").  Full automation of user creation and ongoing management is beyond the scope of this demo, but I would probaboly not recommend you do that task as a CloudFormation activity.  Instead, it makes sense to integrate your ISMS with the solution using the Transfer CLI/API.
@@ -71,4 +71,10 @@ aws transfer update-user --server-id server --user-name user --policy \
 1. Navigate to the AWS Transfer Services page in the AWS Console.
 2. Open the transfer server you have just created.
 3. Click on the user name, then in the **user copnfiguration** window click on the **edit** button.
-4. In the **policy** feild, select the radio button **select policy from IAM**.
+4. In the **policy** feild, select the radio button **select policy from IAM**.  Select the policy starting with the name **data-transfer-stack-scope-down-policy** and then click on the **save** button.
+
+# E. Test
+Follow the testing procedure outlined at this link for specific instructions related to your [file transfer client](https://docs.aws.amazon.com/transfer/latest/userguide/getting-started-use-the-service.html, "file transfer client.")
+
+# F. Delete the stack
+You can delete the stack once you have finished playing with it.  First, shutdown the Transfer Server to prevent usaers from uploading new files.  Next, empty the S3 bucket.  Last, delet the stack toi delete the resources.  The CMK will be disabled then deleted after 7 days.

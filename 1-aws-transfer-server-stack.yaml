@@ -58,7 +58,7 @@ Resources:
       EnableDnsHostnames: 'true'
       Tags:
         - Key: Name
-          Value: aws-transfer-vpc
+          Value: !Join [ '', [!Ref "AWS::StackName", '-vpc'] ]
 
   PubSubNet1:
     Type: 'AWS::EC2::Subnet'
@@ -71,7 +71,7 @@ Resources:
       CidrBlock: !Ref PubSubNet1CidrBlock
       Tags:
         - Key: Name
-          Value: aws-transfer-pub-sn1
+          Value: !Join ['',[!Ref "AWS::StackName", '-pub-sn1']]
 
   PubSubNet2:
     Type: 'AWS::EC2::Subnet'
@@ -84,14 +84,14 @@ Resources:
       CidrBlock: !Ref PubSubNet2CidrBlock
       Tags:
         - Key: Name
-          Value: aws-transfer-pub-sn2
+          Value: !Join ['',[!Ref "AWS::StackName", '-pub-sn2']]
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: aws-transfer-igw
+          Value: !Join ['',[!Ref "AWS::StackName", '-igw']]
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -106,7 +106,7 @@ Resources:
       Domain: vpc
       Tags:
         - Key: Name
-          Value: aws-transfer-igw-eip
+          Value: !Join ['',[!Ref "AWS::StackName", '-igw-eip']]
 
   EIP1:
     Type: AWS::EC2::EIP
@@ -114,7 +114,7 @@ Resources:
       Domain: vpc
       Tags:
         - Key: Name
-          Value: aws-transfer-eip1
+          Value: !Join ['',[!Ref "AWS::StackName", '-eip1']]
 
   EIP2:
     Type: AWS::EC2::EIP
@@ -122,7 +122,7 @@ Resources:
       Domain: vpc
       Tags:
         - Key: Name
-          Value: aws-transfer-eip2
+          Value: !Join ['',[!Ref "AWS::StackName", '-eip2']]
  
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -130,7 +130,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: aws-transfer-pub-rt
+          Value: !Join ['',[!Ref "AWS::StackName", '-pub-rt']]
   
   DefaultPublicRoute:
     Type: AWS::EC2::Route
@@ -182,7 +182,7 @@ Resources:
         CidrIp: !Ref TransferServerSG
       Tags:
         - Key: Name
-          Value: aws-transfer-sg
+          Value: !Join ['',[!Ref "AWS::StackName", '-sg']]
 
   AWSTransferServer:
     Type: AWS::Transfer::Server
@@ -224,9 +224,10 @@ Resources:
       UserName: !Ref User2Name
 
   AWSTransferScopeDownPolicy:
-    Type: AWS::IAM::Policy
+    Type: AWS::IAM::ManagedPolicy
     Properties:
-      PolicyName: data-transfer-scope-down-access-policy
+      Description: "Data Transfer Scope Down Policy."
+      ManagedPolicyName: !Join ['',[!Ref "AWS::StackName", '-scope-down-policy']]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -251,13 +252,19 @@ Resources:
               - s3:GetObjectACL
               - s3:PutObjectACL
             Resource: arn:aws:s3:::${transfer:HomeDirectory}*
-      Roles:
-        - !Ref AWSTransferServerRole
+          - Effect: Allow
+            Sid: KMSKeyAccess
+            Action: 
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource: !GetAtt AWSTransferCMK.Arn
 
   AWSTransferServerPolicy:
-    Type: AWS::IAM::Policy
+    Type: AWS::IAM::ManagedPolicy
     Properties:
-      PolicyName: data-transfer-server-access-policy
+      Description: "Data Transfer Server Policy."
+      ManagedPolicyName: !Join ['',[!Ref "AWS::StackName", '-transfer-server-policy']]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -291,12 +298,7 @@ Resources:
               - kms:Decrypt
               - kms:Encrypt
               - kms:GenerateDataKey
-            Resource: 
-              - !Join 
-                - ''
-                - - 'arn:aws:s3:::'
-                  - !Ref AWSTransferBucket
-                  - '/*'
+            Resource: !GetAtt AWSTransferCMK.Arn
       Roles:
         - !Ref AWSTransferServerRole
 
@@ -323,8 +325,10 @@ Resources:
 
   AWSTransferCMK:
     Type: AWS::KMS::Key
-    Description: An example symmetric CMK
+    Description: "Data Transfer bucket CMK."
     Properties:
+      EnableKeyRotation: true
+      PendingWindowInDays: 7
       KeyPolicy:
         Version: '2012-10-17'
         Id: key-default-1
@@ -351,6 +355,9 @@ Resources:
             - "kms:GenerateDataKey*"
             - "kms:DescribeKey"
           Resource: "*"
+      Tags:
+        - Key: Name
+          Value: !Join ['',[!Ref "AWS::StackName", '-cmk']]
   
   AWSTransferKeyAlias:
     Type: AWS::KMS::Alias
