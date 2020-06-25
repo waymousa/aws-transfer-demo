@@ -257,7 +257,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "Data Transfer Server Policy."
-      ManagedPolicyName: !Join ['',[!Ref "AWS::StackName", '-transfer-server-policy']]
+      ManagedPolicyName: !Join ['',[!Ref "AWS::StackName", '-cloud-watch-write-policy']]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -287,6 +287,25 @@ Resources:
                   - '/*'
       Roles:
         - !Ref AWSTransferServerRole
+        
+  AWSCloudWatchWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+        Description: "Data Transfer Server Policy."
+        ManagedPolicyName: !Join ['',[!Ref "AWS::StackName", '-cloudwatch-write-policy']]
+        PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+                -   Effect: Allow
+                    Sid: AllowCloudWatchWrite
+                    Action:
+                        - logs:CreateLogStream
+                        - logs:DescribeLogStreams
+                        - logs:CreateLogGroup
+                        - logs:PutLogEvents
+                    Resource: "*"
+        Roles:
+            - !Ref AWSTransferServerRole
 
   AWSTransferServerRole:
     Type: AWS::IAM::Role
